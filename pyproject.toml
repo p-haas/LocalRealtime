@@ -1,3 +1,10 @@
+# System dependency required before `pip install`:
+#   brew install espeak-ng
+# The espeakng-loader wheel bundles an older espeak-ng binary whose Oniguruma
+# regex engine does not support all patterns in the English rules file.
+# Installing the Homebrew espeak-ng causes phonemizer-fork to prefer the system
+# binary, which ships with a modern Oniguruma version.
+
 [project]
 name = "realtime-system"
 version = "0.1.0"
