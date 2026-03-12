@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from src.core.config import AppConfig
+from src.core.mlx_guard import MLX_LOCK
 
 
 class KokoroTTS:
@@ -57,8 +58,9 @@ class KokoroTTS:
         return self._model
 
     def _warmup_blocking(self):
-        model = self._load_model()
-        self._ensure_runtime_assets(model)
+        with MLX_LOCK:
+            model = self._load_model()
+            self._ensure_runtime_assets(model)
         return model
 
     def _ensure_runtime_assets(self, model) -> None:
@@ -113,9 +115,10 @@ class KokoroTTS:
         clips: list[np.ndarray] = []
         sample_rate = 24_000
         lang_code = self._resolve_lang_code(self._config.voice)
-        for result in model.generate(text, voice=self._config.voice, lang_code=lang_code):
-            clips.append(np.asarray(result.audio, dtype=np.float32))
-            sample_rate = result.sample_rate
+        with MLX_LOCK:
+            for result in model.generate(text, voice=self._config.voice, lang_code=lang_code):
+                clips.append(np.asarray(result.audio, dtype=np.float32))
+                sample_rate = result.sample_rate
         if not clips:
             return np.zeros(0, dtype=np.float32), sample_rate
         merged = np.concatenate(clips).astype(np.float32, copy=False)

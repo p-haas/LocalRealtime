@@ -10,6 +10,7 @@ import wave
 import numpy as np
 
 from src.core.config import AppConfig
+from src.core.mlx_guard import MLX_LOCK
 from src.core.runtime_types import TranscriptEvent, Utterance
 
 
@@ -64,17 +65,18 @@ class VoxtralSTT:
     ) -> str:
         model = self._load_model()
         partial = ""
-        for chunk in model.generate(
-            str(utterance.wav_path),
-            stream=True,
-        ):
-            if should_stop():
-                break
-            chunk_text = getattr(chunk, "text", None)
-            partial += chunk_text or ""
-            if should_stop():
-                break
-            on_partial(TranscriptEvent(utterance.utterance_id, partial, is_final=False))
+        with MLX_LOCK:
+            for chunk in model.generate(
+                str(utterance.wav_path),
+                stream=True,
+            ):
+                if should_stop():
+                    break
+                chunk_text = getattr(chunk, "text", None)
+                partial += chunk_text or ""
+                if should_stop():
+                    break
+                on_partial(TranscriptEvent(utterance.utterance_id, partial, is_final=False))
         return partial.strip()
 
     def _transcribe_snapshot_blocking(
@@ -93,7 +95,8 @@ class VoxtralSTT:
                 handle.setframerate(sample_rate)
                 handle.writeframes(int16_samples.tobytes())
 
-            result = model.generate(str(wav_path), stream=False)
+            with MLX_LOCK:
+                result = model.generate(str(wav_path), stream=False)
             text = getattr(result, "text", None)
             if text is not None:
                 return str(text).strip()

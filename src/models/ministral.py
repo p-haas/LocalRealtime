@@ -6,6 +6,7 @@ import threading
 from typing import Callable
 
 from src.core.config import AppConfig
+from src.core.mlx_guard import MLX_LOCK
 
 
 class MinistralLLM:
@@ -33,12 +34,13 @@ class MinistralLLM:
             from mlx_lm import stream_generate
 
             try:
-                for response in stream_generate(model, tokenizer, prompt, max_tokens=512):
-                    if stop():
-                        break
-                    if not response.text:
-                        continue
-                    loop.call_soon_threadsafe(queue.put_nowait, response.text)
+                with MLX_LOCK:
+                    for response in stream_generate(model, tokenizer, prompt, max_tokens=512):
+                        if stop():
+                            break
+                        if not response.text:
+                            continue
+                        loop.call_soon_threadsafe(queue.put_nowait, response.text)
             finally:
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
