@@ -7,7 +7,7 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class AppConfig:
     stt_model: str = "mlx-community/Voxtral-Mini-4B-Realtime-2602-4bit"
-    llm_model: str = "mlx-community/Ministral-3-3B-Instruct-2512"
+    llm_model: str = "mlx-community/Ministral-3-3B-Instruct-2512-4bit"
     tts_model: str = "mlx-community/Kokoro-82M-bf16"
     voice: str = "af_heart"
     input_device: str | None = None
