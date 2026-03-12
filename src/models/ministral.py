@@ -55,8 +55,44 @@ class MinistralLLM:
         if self._model is None or self._tokenizer is None:
             from mlx_lm import load
 
-            self._model, self._tokenizer = load(self._config.llm_model)
+            try:
+                self._model, self._tokenizer = load(self._config.llm_model)
+            except Exception as exc:
+                if "Oniguruma" not in str(exc):
+                    raise
+                self._patch_tokenizer_oniguruma(self._config.llm_model)
+                self._model, self._tokenizer = load(self._config.llm_model)
         return self._model, self._tokenizer
+
+    @staticmethod
+    def _patch_tokenizer_oniguruma(model_id: str) -> None:
+        """Remove (?s:...) inline-flag syntax from the cached tokenizer.json.
+
+        tokenizers 0.22.x bundles an Oniguruma version that rejects the
+        non-capturing group with inline flags syntax (e.g. ``(?s:...)``)
+        when it appears inside a very long compiled pattern. The ``s`` flag
+        (dotall) has no effect on the Mistral pre-tokenizer patterns because
+        none of the alternatives contain ``.``, so replacing it with a plain
+        non-capturing group is semantically equivalent.
+        """
+        try:
+            from huggingface_hub import hf_hub_download
+        except ImportError:
+            return
+
+        try:
+            tok_path = hf_hub_download(model_id, "tokenizer.json")
+        except Exception:
+            return
+
+        with open(tok_path) as fh:
+            raw = fh.read()
+
+        if "(?s:" not in raw:
+            return
+
+        with open(tok_path, "w") as fh:
+            fh.write(raw.replace("(?s:", "(?:"))
 
     def close(self) -> None:
         self._executor.shutdown(wait=False, cancel_futures=True)

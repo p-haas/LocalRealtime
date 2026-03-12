@@ -111,13 +111,15 @@ class KokoroTTS:
         model = self._load_model()
         self._ensure_runtime_assets(model)
         clips: list[np.ndarray] = []
+        sample_rate = 24_000
         lang_code = self._resolve_lang_code(self._config.voice)
         for result in model.generate(text, voice=self._config.voice, lang_code=lang_code):
             clips.append(np.asarray(result.audio, dtype=np.float32))
+            sample_rate = result.sample_rate
         if not clips:
-            return np.zeros(0, dtype=np.float32), 24_000
+            return np.zeros(0, dtype=np.float32), sample_rate
         merged = np.concatenate(clips).astype(np.float32, copy=False)
-        return merged, 24_000
+        return merged, sample_rate
 
     def close(self) -> None:
         self._executor.shutdown(wait=False, cancel_futures=True)

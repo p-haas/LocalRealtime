@@ -71,7 +71,7 @@ class VoxtralSTT:
             if should_stop():
                 break
             chunk_text = getattr(chunk, "text", None)
-            partial += str(chunk_text if chunk_text is not None else chunk)
+            partial += chunk_text or ""
             if should_stop():
                 break
             on_partial(TranscriptEvent(utterance.utterance_id, partial, is_final=False))
